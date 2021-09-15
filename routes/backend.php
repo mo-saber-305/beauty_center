@@ -13,13 +13,11 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
+
+Route::prefix('dashboard')->middleware('auth')->group(function () {
+    // services routes
+    Route::resource('services', 'ServiceController');
 });
 
-Auth::routes();
 
-Route::get('/home', 'HomeController@index')->name('home');
 
-Route::get('auth/{driver}', 'Auth\SocialLoginController@redirectToProvider')->name('social.login');
-Route::get('auth/{driver}/callback', 'Auth\SocialLoginController@handleProviderCallback')->name('social.callback');

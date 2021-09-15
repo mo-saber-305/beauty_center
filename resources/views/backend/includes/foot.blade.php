@@ -65,3 +65,4 @@
 <!--end::Page Vendors-->
 <!--begin::Page Scripts(used by this page)-->
 <script src="{{ asset('backend/js/pages/widgets.js') }}"></script>
+@livewireScripts

@@ -18,8 +18,16 @@ class CreateUsersTable extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
             $table->rememberToken();
+            $table->string('password')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('image')->default('backend/images/users/profile/user_default.jpg');
+            $table->string('cover_image')->default('backend/images/users/cover/cover_default.jpg');
+            $table->string('birth_day')->nullable();
+            $table->string('gender')->nullable();
+            $table->string('provider')->nullable();
+            $table->string('provider_id')->nullable();
+            $table->string('fb_account')->nullable();
             $table->timestamps();
         });
     }

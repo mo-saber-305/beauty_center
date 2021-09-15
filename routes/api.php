@@ -17,3 +17,25 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+Route::prefix('v1')->namespace('Api')->group(function () {
+    //get all sections
+    Route::post('sections', 'ApiController@sections');
+
+    //get all categories where('section_id', $section_id)
+    Route::post('categories', 'ApiController@categories');
+
+    //get all sub categories where('category_id', $category_id)
+    Route::post('sub-categories', 'ApiController@subCategories');
+
+    //get fields where('sub_category_id', $subCategory_id)
+    Route::post('fields', 'ApiController@fields');
+
+    /**************************************************************************************************************/
+    // services //
+    /**************************************************************************************************************/
+    //get all services where('sub_category_id', $subCategory_id)
+    Route::post('services', 'ApiController@services');
+    //add new service
+    Route::post('add-service', 'ApiController@addNewService');
+});
