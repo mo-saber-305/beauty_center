@@ -66,3 +66,6 @@
 <!--begin::Page Scripts(used by this page)-->
 <script src="{{ asset('backend/js/pages/widgets.js') }}"></script>
 @livewireScripts
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+<x-livewire-alert::scripts/>
+

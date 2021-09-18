@@ -14,9 +14,14 @@ use Illuminate\Support\Facades\Route;
 */
 
 
-Route::prefix('dashboard')->middleware('auth')->group(function () {
-    // services routes
-    Route::resource('services', 'ServiceController');
+Route::group(['prefix' => LaravelLocalization::setLocale()], function () {
+
+    Route::prefix('dashboard')->name('dashboard.')->middleware('auth')->group(function () {
+        // home route
+        Route::get('/', 'HomeController@index')->name('home');
+        // services routes
+        Route::resource('services', 'ServiceController');
+    });
 });
 
 

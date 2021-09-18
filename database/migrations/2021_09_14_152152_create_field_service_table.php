@@ -17,7 +17,8 @@ class CreateFieldServiceTable extends Migration
             $table->id();
             $table->unsignedBigInteger('field_id');
             $table->unsignedBigInteger('service_id');
-            $table->text('value');
+            $table->text('value_ar');
+            $table->text('value_en');
             $table->timestamps();
         });
     }

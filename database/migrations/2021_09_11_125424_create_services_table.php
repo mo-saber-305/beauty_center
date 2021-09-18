@@ -12,6 +12,7 @@ class CreateServicesTable extends Migration
             $table->increments('id');
             $table->unsignedBigInteger('category_id');
             $table->unsignedBigInteger('sub_category_id');
+            $table->boolean('as_offers')->default(0);
             $table->timestamps();
         });
     }
