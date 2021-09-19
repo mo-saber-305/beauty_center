@@ -19,6 +19,22 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 });
 
 Route::prefix('v1')->namespace('Api')->group(function () {
+
+    // login route
+    Route::post('login', 'ApiController@login');
+
+    // register route
+    Route::post('register', 'ApiController@register');
+
+    // email verification route
+    Route::post('verify', 'ApiController@verify');
+
+    // logout route
+    Route::post('logout', 'ApiController@logout');
+
+    // profile route
+    Route::post('profile', 'ApiController@profile');
+
     //get all sections
     Route::post('sections', 'ApiController@sections');
 

@@ -9,19 +9,199 @@ use App\Models\Section;
 use App\Models\Service;
 use App\Models\ServiceImage;
 use App\Models\SubCategory;
+use App\Models\User;
+use App\Models\UserVerification;
 use App\Traits\GeneralTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Mail;
 
 class ApiController extends Controller
 {
     use GeneralTrait;
 
+    // login method
+    public function login(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'route_token' => 'required',
+                'email' => 'required|email',
+                'password' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return apiResponse('e400', false, $validator->errors()->first());
+            }
+
+            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+                $credentials = $request->only('email', 'password');
+
+                if (!$token = auth('api')->attempt($credentials)) {
+                    return apiResponse('e100', false, 'خطأ في تسجيل الدخول من فضلك حاول مره اخري');
+                }
+
+                return $this->respondWithToken($token);
+            } else {
+                return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
+            }
+        } catch (\Exception $ex) {
+            return apiResponse('e500', false, $ex->getMessage());
+        }
+    }
+
+    // register method
+    public function register(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'route_token' => 'required',
+                'name' => 'required',
+                'email' => 'required|email|unique:users',
+                'password' => 'required|confirmed',
+                'phone' => 'required|regex:/(01)[0-9]{9}/',
+                'birth_day' => 'required|date',
+                'gender' => 'required'
+            ]);
+
+            if ($validator->fails()) {
+                return apiResponse('e400', false, $validator->errors()->first());
+            }
+
+            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+                $name = $request['name'];
+                $email = $request['email'];
+                $password = $request['password'];
+                $user = User::create([
+                    'name' => $name,
+                    'email' => $email,
+                    'password' => bcrypt($password),
+                    'phone' => $request['phone'],
+                    'birth_day' => $request['birth_day'],
+                    'gender' => $request['gender'],
+                ]);
+
+                $verification_code = random_int(100000, 999999); //Generate verification code
+
+                // save code in user_verifications table
+                UserVerification::create(['user_id' => $user->id, 'code' => $verification_code]);
+
+                $subject = "Please verify your email address.";
+                Mail::send('email.verify', ['name' => $name, 'verification_code' => $verification_code],
+                    function ($mail) use ($email, $name, $subject) {
+                        $mail->from(env('MAIL_FROM_ADDRESS'), "From User/Company Name Goes Here");
+                        $mail->to($email, $name);
+                        $mail->subject($subject);
+                    });
+
+//                $credentials = $request->only(['email', 'password']);
+//
+//                if (!$token = auth('api')->attempt($credentials)) {
+//                    return apiResponse('e100', false, 'خطأ في تسجيل الدخول من فضلك حاول مره اخري');
+//                }
+
+//                return $this->respondWithToken($token);
+                return apiResponse('e200', true, 'تم ارسال الكود بنجاح', $verification_code);
+            } else {
+                return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
+            }
+        } catch (\Exception $ex) {
+            return apiResponse('e500', false, $ex->getMessage());
+        }
+    }
+
+    // logout method
+    public function logout(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'route_token' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return apiResponse('e400', false, $validator->errors()->first());
+            }
+
+            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+                auth('api')->logout();
+                return apiResponse('e200', true, 'تم تسجيل الخروج بنجاح');
+            } else {
+                return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
+            }
+        } catch (\Exception $ex) {
+            return apiResponse('e500', false, $ex->getMessage());
+        }
+    }
+
+    // logout method
+    public function profile(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'route_token' => 'required',
+                'user_id' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return apiResponse('e400', false, $validator->errors()->first());
+            }
+
+            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+                $user = User::where('id', $request['user_id'])->first();
+
+                if ($user) {
+                    $data = [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'image' => asset($user->image),
+                        'cover_image' => asset($user->cover_image),
+                        'phone' => $user->phone,
+                        'birth_day' => $user->birth_day,
+                        'gender' => $user->gender,
+                        'fb_account' => $user->fb_account,
+                    ];
+                    return apiResponse('e200', true, 'تم استرجاع البيانات بنجاح', $data);
+                }
+                return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
+            } else {
+                return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
+            }
+        } catch (\Exception $ex) {
+            return apiResponse('e500', false, $ex->getMessage());
+        }
+    }
+
+    /*The data that return back when login in */
+    protected function respondWithToken($token)
+    {
+        try {
+            $user = auth('api')->user()->select('id', 'name', 'email')->first();
+
+            if ($user) {
+                $data = [
+                    'user' => $user,
+                    'access_token' => $token,
+                    'token_type' => 'bearer',
+                    'expires_in' => auth('api')->factory()->getTTL() * 60
+                ];
+
+                return apiResponse('e200', true, 'تم تسجيل الدخول بنجاح', $data);
+            }
+
+            return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
+
+        } catch (\Exception $ex) {
+            return apiResponse('e500', false, $ex->getMessage());
+        }
+
+
+    }
+
     //get all sections
     public function sections(Request $request)
     {
         try {
-
             $validator = Validator::make($request->all(), [
                 'route_token' => 'required',
             ]);

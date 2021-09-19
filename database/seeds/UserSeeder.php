@@ -4,6 +4,7 @@ use App\Models\Category;
 use App\Models\Field;
 use App\Models\FieldSubCategory;
 use App\Models\Section;
+use App\Models\Setting;
 use App\Models\SubCategory;
 use App\Models\User;
 use Carbon\Carbon;
@@ -190,5 +191,12 @@ class UserSeeder extends Seeder
             ['field_id' => 10, 'sub_category_id' => 8, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
         ]);
 
+
+        Setting::create([
+            'id' => 1,
+            'app_name' => 'Beauty Center',
+            'app_url' => 'http://localhost:8000',
+            'app_logo' => 'backend/images/default_logo.png',
+        ]);
     }
 }

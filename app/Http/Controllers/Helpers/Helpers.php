@@ -14,6 +14,7 @@ function apiResponse($code, $status, $msg, $data = null)
 
 
 /**
+ * code (e100) => authentication غلط في ال
  * code (e200) => كل حاجه تمام
  * code (e300) => لا توجد بيانات
  * code (e400) => validation غلط في ال
