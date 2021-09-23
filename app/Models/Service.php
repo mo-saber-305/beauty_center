@@ -11,6 +11,9 @@ class Service extends Model
     public $timestamps = true;
     protected $guarded = [];
 
+    /************************************************************************************************************************/
+
+    //relations methods
     public function subCategory()
     {
         return $this->belongsTo('App\Models\SubCategory');
@@ -24,6 +27,11 @@ class Service extends Model
     public function images()
     {
         return $this->hasMany(ServiceImage::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
 }

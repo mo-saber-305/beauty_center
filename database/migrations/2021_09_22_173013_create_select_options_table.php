@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateSettingsTable extends Migration
+class CreateSelectOptionsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,12 +13,11 @@ class CreateSettingsTable extends Migration
      */
     public function up()
     {
-        Schema::create('settings', function (Blueprint $table) {
+        Schema::create('select_options', function (Blueprint $table) {
             $table->id();
-            $table->string('app_name');
-            $table->string('app_url');
-            $table->string('app_logo')->default('backend/images/default_logo.png');
-            $table->string('route_token');
+            $table->unsignedBigInteger('field_id');
+            $table->string('name_ar');
+            $table->string('name_en');
             $table->timestamps();
         });
     }
@@ -30,6 +29,6 @@ class CreateSettingsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('settings');
+        Schema::dropIfExists('select_options');
     }
 }

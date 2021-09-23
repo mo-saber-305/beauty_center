@@ -4,17 +4,23 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Field;
 use App\Models\FieldService;
 use App\Models\Section;
 use App\Models\Service;
 use App\Models\ServiceImage;
 use App\Models\SubCategory;
 use App\Models\User;
+use App\Models\UserResetPassword;
 use App\Models\UserVerification;
 use App\Traits\GeneralTrait;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Mail;
+use Stichoza\GoogleTranslate\GoogleTranslate;
 
 class ApiController extends Controller
 {
@@ -34,14 +40,77 @@ class ApiController extends Controller
                 return apiResponse('e400', false, $validator->errors()->first());
             }
 
-            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+            if ($request['route_token'] == $this->routeToken()) {
                 $credentials = $request->only('email', 'password');
+
+                $credentials['is_verified'] = 1;
 
                 if (!$token = auth('api')->attempt($credentials)) {
                     return apiResponse('e100', false, 'خطأ في تسجيل الدخول من فضلك حاول مره اخري');
                 }
 
-                return $this->respondWithToken($token);
+                $user = User::where('email', $request['email'])->select('id', 'name', 'email')->first();
+
+                return $this->respondWithToken($token, $user);
+            } else {
+                return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
+            }
+        } catch (\Exception $ex) {
+            return apiResponse('e500', false, $ex->getMessage());
+        }
+    }
+
+    // social login method
+    public function socialLogin(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'route_token' => 'required',
+                'name' => 'required',
+                'email' => 'required|email',
+                'provider' => 'required',
+                'provider_id' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return apiResponse('e400', false, $validator->errors()->first());
+            }
+
+            if ($request['route_token'] == $this->routeToken()) {
+                $user = User::where('email', $request->email)->select('email', 'password')->first();
+
+                /*check if user has email in database or not => if has email */
+                if (!$user) {
+                    $data = User::create([
+                        'name' => $request->name,
+                        'email' => $request->email,
+                        'is_verified' => 1,
+                        'email_verified_at' => Carbon::now(),
+                        'provider' => $request->provider,
+                        'provider_id' => $request->provider_id
+                    ]);
+
+                    if (!$token = auth('api')->login($data)) {
+                        return apiResponse('e100', false, 'خطأ في تسجيل الدخول من فضلك حاول مره اخري');
+                    }
+
+                    $user_data = [
+                        'id' => $data->id,
+                        'name' => $data->name,
+                        'email' => $data->email,
+                    ];
+
+                    return $this->respondWithToken($token, $user_data);
+                }
+
+                if (!$token = auth('api')->login($user)) {
+                    return apiResponse('e100', false, 'خطأ في تسجيل الدخول من فضلك حاول مره اخري');
+                }
+
+                $user_data = User::where('email', $request->email)->select('id', 'name', 'email')->first();
+
+                return $this->respondWithToken($token, $user_data);
+
             } else {
                 return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
             }
@@ -68,7 +137,7 @@ class ApiController extends Controller
                 return apiResponse('e400', false, $validator->errors()->first());
             }
 
-            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+            if ($request['route_token'] == $this->routeToken()) {
                 $name = $request['name'];
                 $email = $request['email'];
                 $password = $request['password'];
@@ -94,14 +163,58 @@ class ApiController extends Controller
                         $mail->subject($subject);
                     });
 
-//                $credentials = $request->only(['email', 'password']);
-//
-//                if (!$token = auth('api')->attempt($credentials)) {
-//                    return apiResponse('e100', false, 'خطأ في تسجيل الدخول من فضلك حاول مره اخري');
-//                }
+                $data = [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ];
 
-//                return $this->respondWithToken($token);
-                return apiResponse('e200', true, 'تم ارسال الكود بنجاح', $verification_code);
+                return apiResponse('e200', true, 'تم انشاء حساب جديد وارسال الكود بنجاح من فضلك فعل حسابك حتي تتمكن من تسجيل الدخول', $data);
+            } else {
+                return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
+            }
+        } catch (\Exception $ex) {
+            return apiResponse('e500', false, $ex->getMessage());
+        }
+    }
+
+    // verify method
+    public function verify(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'route_token' => 'required',
+                'user_id' => 'required',
+                'code' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return apiResponse('e400', false, $validator->errors()->first());
+            }
+
+            if ($request['route_token'] == $this->routeToken()) {
+                $code = UserVerification::where('user_id', $request['user_id'])->where('code', $request['code'])->first();
+
+                if (!is_null($code)) {
+                    $user = User::where('id', $code->user_id)->first();
+
+                    if (!is_null($user)) {
+                        if ($user->is_verified == 1) {
+                            return apiResponse('e200', true, 'هذا الحساب مفعل يمكنك تسجيل الدخول بدون تفعيل');
+                        }
+
+                        $user->update([
+                            'is_verified' => 1,
+                            'email_verified_at' => Carbon::now()
+                        ]);
+
+                        $code->delete();
+                        return apiResponse('e200', true, 'تم تفعيل الحساب بنجاح يمكنك تسجيل الدخول الان');
+                    }
+
+                    return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
+                }
+                return apiResponse('e300', false, 'هذا الكود غير صحيح من فضلك ضع كود صحيح وحاول مره اخري');
             } else {
                 return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
             }
@@ -122,7 +235,7 @@ class ApiController extends Controller
                 return apiResponse('e400', false, $validator->errors()->first());
             }
 
-            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+            if ($request['route_token'] == $this->routeToken()) {
                 auth('api')->logout();
                 return apiResponse('e200', true, 'تم تسجيل الخروج بنجاح');
             } else {
@@ -133,7 +246,107 @@ class ApiController extends Controller
         }
     }
 
-    // logout method
+    // reset password method
+    public function resetPassword(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'route_token' => 'required',
+                'email' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return apiResponse('e400', false, $validator->errors()->first());
+            }
+
+            if ($request['route_token'] == $this->routeToken()) {
+                $user = User::where('email', $request['email'])->first();
+
+                if ($user) {
+                    if ($user->is_verified == 1) {
+                        $name = $user->name;
+                        $email = $user->email;
+
+                        $verification_code = random_int(100000, 999999); //Generate verification code
+
+                        $resetPassword = UserResetPassword::where('email', $email)->first();
+                        if ($resetPassword) {
+                            // update code in user_reset_password table
+                            $resetPassword->update(['code' => $verification_code]);
+                        } else {
+                            // save code in user_reset_password table
+                            UserResetPassword::create(['email' => $email, 'code' => $verification_code]);
+                        }
+
+                        $subject = "Please verify your email address.";
+                        Mail::send('email.verify', ['name' => $name, 'verification_code' => $verification_code],
+                            function ($mail) use ($email, $name, $subject) {
+                                $mail->from(env('MAIL_FROM_ADDRESS'), "From User/Company Name Goes Here");
+                                $mail->to($email, $name);
+                                $mail->subject($subject);
+                            });
+
+                        $data = [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                        ];
+                        return apiResponse('e200', true, 'تم ارسال الكود بنجاح', $data);
+                    }
+
+                    return apiResponse('e300', false, 'للاسف يجب تفعيل الحساب اولا');
+                }
+                return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
+            } else {
+                return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
+            }
+        } catch (\Exception $ex) {
+            return apiResponse('e500', false, $ex->getMessage());
+        }
+    }
+
+    // change password method
+    public function changePassword(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'route_token' => 'required',
+                'user_id' => 'required',
+                'code' => 'required',
+                'password' => 'required|confirmed|min:6',
+            ]);
+
+            if ($validator->fails()) {
+                return apiResponse('e400', false, $validator->errors()->first());
+            }
+
+            if ($request['route_token'] == $this->routeToken()) {
+                $user = User::where('id', $request['user_id'])->first();
+
+
+                if ($user) {
+                    $email = $user->email;
+
+                    // check if code is true
+                    $checkCode = UserResetPassword::where('email', $email)->where('code', $request['code'])->first();
+                    if ($checkCode) {
+                        $user->update(['password' => Hash::make($request->password)]);
+
+                        return apiResponse('e200', true, 'تم تغيير الباسورد بنجاح');
+                    }
+
+                    return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
+                }
+                return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
+            } else {
+                return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
+            }
+        } catch (\Exception $ex) {
+            return apiResponse('e500', false, $ex->getMessage());
+        }
+    }
+
+    // profile method
     public function profile(Request $request)
     {
         try {
@@ -146,7 +359,7 @@ class ApiController extends Controller
                 return apiResponse('e400', false, $validator->errors()->first());
             }
 
-            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+            if ($request['route_token'] == $this->routeToken()) {
                 $user = User::where('id', $request['user_id'])->first();
 
                 if ($user) {
@@ -172,24 +385,79 @@ class ApiController extends Controller
         }
     }
 
-    /*The data that return back when login in */
-    protected function respondWithToken($token)
+
+    // update profile method
+    public function updateProfile(Request $request)
     {
         try {
-            $user = auth('api')->user()->select('id', 'name', 'email')->first();
+            $validator = Validator::make($request->all(), [
+                'route_token' => 'required',
+                'user_id' => 'required',
+                'name' => 'required',
+                'phone' => 'required',
+                'password' => 'confirmed|min:6',
+                'image' => 'image',
+                'cover' => 'image',
+            ]);
 
-            if ($user) {
-                $data = [
-                    'user' => $user,
-                    'access_token' => $token,
-                    'token_type' => 'bearer',
-                    'expires_in' => auth('api')->factory()->getTTL() * 60
-                ];
+            if ($validator->fails()) {
+                return apiResponse('e400', false, $validator->errors()->first());
 
-                return apiResponse('e200', true, 'تم تسجيل الدخول بنجاح', $data);
             }
 
-            return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
+            if ($request['route_token'] == $this->routeToken()) {
+                $user = User::where('id', $request['user_id'])->first();
+                if ($user) {
+                    $data = [];
+
+                    if ($request->has('image')) {
+                        if ($user->image != 'user_default.jpg') {
+                            File::delete($user->image);
+                        }
+
+                        $data['image'] = $this->uploadImage('users/profile', $request->image);
+                    }
+
+                    if ($request->has('cover')) {
+                        if ($user->cover_image != 'cover_default.jpg') {
+                            File::delete($user->cover_image);
+                        }
+                        $data['cover_image'] = $this->uploadImage('users/cover', $request->cover);
+                    }
+
+                    if ($request->has('password')) {
+                        $data['password'] = Hash::make($request['password']);
+                    }
+
+                    $data['name'] = $request['name'];
+                    $data['phone'] = $request['phone'];
+
+                    $user->update($data);
+
+                    return apiResponse('e200', true, 'تم حفظ البيانات بنجاح');
+                }
+
+                return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
+            } else {
+                return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
+            }
+        } catch (\Exception $ex) {
+            return apiResponse('e500', false, $ex->getMessage());
+        }
+    }
+
+    /*The data that return back when login in */
+    protected function respondWithToken($token, $user)
+    {
+        try {
+            $data = [
+                'user' => $user,
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => auth('api')->factory()->getTTL() * 60
+            ];
+
+            return apiResponse('e200', true, 'تم تسجيل الدخول بنجاح', $data);
 
         } catch (\Exception $ex) {
             return apiResponse('e500', false, $ex->getMessage());
@@ -204,17 +472,30 @@ class ApiController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'route_token' => 'required',
+                'lang' => 'required',
             ]);
 
             if ($validator->fails()) {
                 return apiResponse('e400', false, $validator->errors()->first());
             }
 
-            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+            if ($request['route_token'] == $this->routeToken()) {
                 $sections = Section::all();
 
                 if (count($sections)) {
-                    return apiResponse('e200', true, 'تم استرجاع البيانات بنجاح', $sections);
+                    $lang = $request['lang'];
+                    $nameVar = "name_$lang";
+                    $data = [];
+                    foreach ($sections as $section) {
+                        $data[] = [
+                            'id' => $section->id,
+                            'name' => $section->$nameVar,
+                            'created_at' => $section->created_at,
+                            'updated_at' => $section->updated_at,
+                        ];
+                    }
+
+                    return apiResponse('e200', true, 'تم استرجاع البيانات بنجاح', $data);
                 }
                 return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
             } else {
@@ -230,21 +511,38 @@ class ApiController extends Controller
     public function categories(Request $request)
     {
         try {
-
             $validator = Validator::make($request->all(), [
                 'route_token' => 'required',
                 'section_id' => 'required',
+                'lang' => 'required',
             ]);
 
             if ($validator->fails()) {
                 return apiResponse('e400', false, $validator->errors()->first());
             }
 
-            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+            if ($request['route_token'] == $this->routeToken()) {
                 $categories = Category::where('section_id', $request['section_id'])->get();
 
                 if (count($categories)) {
-                    return apiResponse('e200', true, 'تم استرجاع البيانات بنجاح', $categories);
+                    $lang = $request['lang'];
+                    $nameVar = "name_$lang";
+                    $descriptionVar = "description_$lang";
+                    $data = [];
+
+                    foreach ($categories as $category) {
+                        $data[] = [
+                            'id' => $category->id,
+                            'section_id' => $category->section_id,
+                            'name' => $category->$nameVar,
+                            'description' => $category->$descriptionVar,
+                            'image' => $category->image_path,
+                            'created_at' => $category->created_at,
+                            'updated_at' => $category->updated_at,
+                        ];
+                    }
+
+                    return apiResponse('e200', true, 'تم استرجاع البيانات بنجاح', $data);
                 }
                 return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
             } else {
@@ -264,17 +562,33 @@ class ApiController extends Controller
             $validator = Validator::make($request->all(), [
                 'route_token' => 'required',
                 'category_id' => 'required',
+                'lang' => 'required',
             ]);
 
             if ($validator->fails()) {
                 return apiResponse('e400', false, $validator->errors()->first());
             }
 
-            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+            if ($request['route_token'] == $this->routeToken()) {
                 $subCategories = SubCategory::where('category_id', $request['category_id'])->get();
 
                 if (count($subCategories)) {
-                    return apiResponse('e200', true, 'تم استرجاع البيانات بنجاح', $subCategories);
+                    $lang = $request['lang'];
+                    $nameVar = "name_$lang";
+                    $data = [];
+
+                    foreach ($subCategories as $subCategory) {
+                        $data[] = [
+                            'id' => $subCategory->id,
+                            'category_id' => $subCategory->category_id,
+                            'name' => $subCategory->$nameVar,
+                            'image' => $subCategory->image_path,
+                            'created_at' => $subCategory->created_at,
+                            'updated_at' => $subCategory->updated_at,
+                        ];
+                    }
+
+                    return apiResponse('e200', true, 'تم استرجاع البيانات بنجاح', $data);
                 }
                 return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
             } else {
@@ -293,6 +607,7 @@ class ApiController extends Controller
             $validator = Validator::make($request->all(), [
                 'route_token' => 'required',
                 'sub_category_id' => 'required',
+                'lang' => 'required',
             ]);
 
             if ($validator->fails()) {
@@ -300,22 +615,41 @@ class ApiController extends Controller
             }
 
 
-            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+            if ($request['route_token'] == $this->routeToken()) {
 
                 $subCategories = SubCategory::where('id', $request['sub_category_id'])->first();
 
                 if ($subCategories) {
-                    $fields = $subCategories->fields()->get();
+                    $fields = $subCategories->fields()->with('options')->get();
                     if (count($fields)) {
+                        $options = [];
                         $data = [];
+                        $lang = $request['lang'];
+                        $nameVar = "name_$lang";
                         foreach ($fields as $field) {
-                            $data[] = [
-                                'id' => $field['id'],
-                                'name' => $field['name'],
-                                'type' => $field['type'],
-                                'created_at' => $field['created_at'],
-                                'updated_at' => $field['updated_at'],
+                            foreach ($field->options()->get() as $item) {
+                                $options[] = [
+                                    'id' => $item->id,
+                                    'name' => $item->$nameVar,
+                                ];
+                            }
+
+                            $fieldsData = [
+                                'id' => $field->id,
+                                'key' => $field->key,
+                                'name' => $field->$nameVar,
+                                'type' => $field->type,
                             ];
+
+                            $optionsData = [
+                                'options' => $options
+                            ];
+
+                            if ($field->type == 'select') {
+                                $data[] = array_merge($fieldsData, $optionsData);
+                            } else {
+                                $data[] = $fieldsData;
+                            }
                         }
                         return apiResponse('e200', true, 'تم استرجاع البيانات بنجاح', $data);
                     }
@@ -338,14 +672,14 @@ class ApiController extends Controller
             $validator = Validator::make($request->all(), [
                 'route_token' => 'required',
                 'sub_category_id' => 'required',
+                'lang' => 'required',
             ]);
 
             if ($validator->fails()) {
                 return apiResponse('e400', false, $validator->errors()->first());
             }
 
-
-            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+            if ($request['route_token'] == $this->routeToken()) {
 
                 $subCategories = SubCategory::where('id', $request['sub_category_id'])->first();
 
@@ -354,16 +688,94 @@ class ApiController extends Controller
 
                     if (count($services)) {
                         $data = [];
+                        $lang = $request['lang'];
+                        $nameVar = "name_$lang";
+                        $valueVar = "value_$lang";
 
                         foreach ($services as $service) {
                             /* هنا بقي بنجيب الفيلدس اللي تبع السيرفيس دي */
-                            $fields = $service->fields()->withPivot('value')->get();
+                            $fields = $service->fields()->withPivot($valueVar)->get();
                             $fields_data = [];
                             foreach ($fields as $field) {
                                 $fields_data[] = [
                                     'id' => $field->id,
-                                    'name' => $field->name,
-                                    'value' => $field->pivot->value,
+                                    'key' => $field->key,
+                                    'name' => $field->$nameVar,
+                                    'value' => $field->pivot->$valueVar,
+                                    'type' => $field->type
+                                ];
+                            }
+
+                            /* هنا يامعلم بنجيب الصور اللي تبع السيرفس دي لانها محفوظه في تابل تانيه مختلفه */
+                            $images = [];
+                            foreach ($service->images()->get() as $item) {
+                                $images[] = [
+                                    'id' => $item->id,
+                                    'image' => asset($item->image),
+                                ];
+                            }
+
+                            $data[] = [
+                                'id' => $service['id'],
+                                'user_id' => $service['user_id'],
+                                'category_id' => $service['category_id'],
+                                'sub_category_id' => $service['sub_category_id'],
+                                'fields' => $fields_data,
+                                'images' => count($images) ? $images : null
+                            ];
+                        }
+
+                        return apiResponse('e200', true, 'تم استرجاع البيانات بنجاح', $data);
+                    }
+                    return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
+                }
+                return apiResponse('e300', false, 'للاسف لا توجد بيانات حاليا');
+            } else {
+                return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
+            }
+
+        } catch (\Exception $ex) {
+            return apiResponse('e500', false, $ex->getMessage());
+        }
+    }
+
+    //get services for user where('user_id', $user_id)
+    public function servicesForUser(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'route_token' => 'required',
+                'user_id' => 'required',
+                'lang' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return apiResponse('e400', false, $validator->errors()->first());
+            }
+
+            if ($request['route_token'] == $this->routeToken()) {
+
+                $user = User::where('id', $request['user_id'])->first();
+
+                if ($user) {
+                    $services = $user->services()->with('fields')->get();
+
+                    if (count($services)) {
+                        $data = [];
+                        $lang = $request['lang'];
+                        $nameVar = "name_$lang";
+                        $valueVar = "value_$lang";
+
+                        foreach ($services as $service) {
+                            /* هنا بقي بنجيب الفيلدس اللي تبع السيرفيس دي */
+                            $fields = $service->fields()->withPivot($valueVar)->get();
+                            $fields_data = [];
+                            foreach ($fields as $field) {
+                                $fields_data[] = [
+                                    'id' => $field->id,
+                                    'key' => $field->key,
+                                    'name' => $field->$nameVar,
+                                    'value' => $field->pivot->$valueVar,
                                     'type' => $field->type
                                 ];
                             }
@@ -406,28 +818,52 @@ class ApiController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'route_token' => 'required',
+                'lang' => 'required',
+                'user_id' => 'required',
                 'category_id' => 'required',
                 'sub_category_id' => 'required',
+                'as_offers' => 'required',
                 'fields' => 'required',
             ]);
 
             if ($validator->fails()) {
                 return apiResponse('e400', false, $validator->errors()->first());
             }
-
-            if ($request['route_token'] == env('ROUTE_TOKEN')) {
+            if ($request['route_token'] == $this->routeToken()) {
                 /* هنا بقي بنحفظ الداتا بتاعة السيرفس بس مش كلها لان في داتا تانيه في جداول مختلفه */
                 $service = Service::create([
+                    'user_id' => $request['user_id'],
                     'category_id' => $request['category_id'],
-                    'sub_category_id' => $request['sub_category_id']
+                    'sub_category_id' => $request['sub_category_id'],
+                    'as_offers' => $request['as_offers'],
                 ]);
 
+                $lang = $request['lang'];
+
                 /* هنا بقي بنحفظ الداتا بتاعة الفيلدس اللي تبع السيرفس */
-                foreach ($request['fields'] as $field) {
+                foreach ($request['fields'] as $item) {
+                    $field = Field::where('id', $item['id'])->first();
+
+                    /*translate only fields has type tex or varchar*/
+                    if ($field->type == 'varchar' || $field->type == 'text') {
+                        /*translate fields before save*/
+                        if ($lang == 'ar') {
+                            $value_ar = $item['value'];
+                            $value_en = GoogleTranslate::trans($item['value'], 'en', 'ar');
+                        } else {
+                            $value_ar = GoogleTranslate::trans($item['value'], 'ar', 'en');
+                            $value_en = $item['value'];
+                        }
+                    } else {
+                        $value_ar = $item['value'];
+                        $value_en = $item['value'];
+                    }
+
                     FieldService::create([
-                        'field_id' => $field['id'],
+                        'field_id' => $item['id'],
                         'service_id' => $service->id,
-                        'value' => $field['value'],
+                        'value_ar' => $value_ar,
+                        'value_en' => $value_en,
                     ]);
                 }
 

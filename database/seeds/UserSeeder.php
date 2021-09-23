@@ -4,6 +4,7 @@ use App\Models\Category;
 use App\Models\Field;
 use App\Models\FieldSubCategory;
 use App\Models\Section;
+use App\Models\SelectOption;
 use App\Models\Setting;
 use App\Models\SubCategory;
 use App\Models\User;
@@ -23,6 +24,10 @@ class UserSeeder extends Seeder
             'name' => 'Super Admin',
             'email' => 'info@admin.com',
             'password' => bcrypt('admin5050'),
+            'email_verified_at' => Carbon::now(),
+            'is_verified' => 1,
+            'birth_day' => '30-05-1994',
+            'gender' => 'male',
         ]);
 
         $user->attachRole('super_admin');
@@ -191,12 +196,27 @@ class UserSeeder extends Seeder
             ['field_id' => 10, 'sub_category_id' => 8, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
         ]);
 
+        SelectOption::insert([
+            ['field_id' => 4, 'name_ar' => 'للإيجار', 'name_en' => 'for rent', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['field_id' => 4, 'name_ar' => 'للشراء', 'name_en' => 'to buy', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['field_id' => 12, 'name_ar' => 'حديد', 'name_en' => 'iron', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['field_id' => 12, 'name_ar' => 'نحاس', 'name_en' => 'copper', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['field_id' => 12, 'name_ar' => 'بلاستيك', 'name_en' => 'plastic', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['field_id' => 14, 'name_ar' => 'متاح', 'name_en' => 'available', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['field_id' => 14, 'name_ar' => 'غير متاح', 'name_en' => 'unavailable', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['field_id' => 22, 'name_ar' => 'زفاف', 'name_en' => 'wedding', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['field_id' => 22, 'name_ar' => 'خطوبه', 'name_en' => 'engagement', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['field_id' => 22, 'name_ar' => 'مناسبه', 'name_en' => 'suitable', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['field_id' => 22, 'name_ar' => 'عمل', 'name_en' => 'work', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+        ]);
+
 
         Setting::create([
             'id' => 1,
             'app_name' => 'Beauty Center',
             'app_url' => 'http://localhost:8000',
             'app_logo' => 'backend/images/default_logo.png',
+            'route_token' => 'smntffco2hfn6vui86hutja7',
         ]);
     }
 }

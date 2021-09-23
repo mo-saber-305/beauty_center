@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateSettingsTable extends Migration
+class CreateUserResetPasswordTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,12 +13,10 @@ class CreateSettingsTable extends Migration
      */
     public function up()
     {
-        Schema::create('settings', function (Blueprint $table) {
+        Schema::create('user_reset_password', function (Blueprint $table) {
             $table->id();
-            $table->string('app_name');
-            $table->string('app_url');
-            $table->string('app_logo')->default('backend/images/default_logo.png');
-            $table->string('route_token');
+            $table->string('email');
+            $table->string('code');
             $table->timestamps();
         });
     }
@@ -30,6 +28,6 @@ class CreateSettingsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('settings');
+        Schema::dropIfExists('user_reset_password');
     }
 }

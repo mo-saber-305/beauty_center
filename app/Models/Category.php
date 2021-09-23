@@ -17,7 +17,7 @@ class Category extends Model
     // attributes methods
     public function getImagePathAttribute()
     {
-        return asset('backend/images/categories/' . $this->image);
+        return asset($this->image);
     }
 
     /************************************************************************************************************************/

@@ -13,11 +13,16 @@ class Field extends Model
 
     public function services()
     {
-        return $this->belongsToMany('App\Models\Service');
+        return $this->belongsToMany(Service::class);
     }
 
     public function subCategories()
     {
-        return $this->belongsToMany('App\Models\SubCategory');
+        return $this->belongsToMany(SubCategory::class);
+    }
+
+    public function options()
+    {
+        return $this->hasMany(SelectOption::class);
     }
 }
