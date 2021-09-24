@@ -2,14 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="13c270fa-7670-4240-9f27-dd6a51405d3b" name="Default Changelist" comment="working on apis">
-      <change afterPath="$PROJECT_DIR$/public/backend/images/services/5Fo1qBxW8FDHEjPIMqBLBEIFHKsClZsGdfXzk0uW.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/public/backend/images/services/EYwfF4aedCImvesmL4vwQa6we37Ha9pCyfVSXVVx.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/public/backend/images/services/H5yIXl4a3tu68oGh9riNEzrxsEucXteUS20qXtia.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/public/backend/images/services/XxtBDwLDRejMpEucduzFW0pt4VaSXq6ATeKm3UdQ.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/public/backend/images/services/Ynq9Pq5YBE5zH5BrlAjXgo3O8dji0MyFiuES1qDa.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/public/backend/images/services/aHV5IQ9zqwEuPqPOsRlCE6tnQe6iuxzQljNoypCZ.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/public/backend/images/users/cover/3OAvpkEPLW8yYCYnrLdQyEjx1darXN00QAcA1J7m.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/public/backend/images/users/profile/epBjOD62SHsRWcc8kHAVg9QGP5sqkObFajhMMePs.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/Http/Controllers/Api/ApiController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/Http/Controllers/Api/ApiController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/migrations/2021_09_11_125424_create_services_table.php" beforeDir="false" afterPath="$PROJECT_DIR$/database/migrations/2021_09_11_125424_create_services_table.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/seeds/UserSeeder.php" beforeDir="false" afterPath="$PROJECT_DIR$/database/seeds/UserSeeder.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/backend/images/services/5Fo1qBxW8FDHEjPIMqBLBEIFHKsClZsGdfXzk0uW.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/backend/images/services/aHV5IQ9zqwEuPqPOsRlCE6tnQe6iuxzQljNoypCZ.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/backend/images/users/cover/3OAvpkEPLW8yYCYnrLdQyEjx1darXN00QAcA1J7m.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/routes/api.php" beforeDir="false" afterPath="$PROJECT_DIR$/routes/api.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,7 +59,7 @@
     <property name="last_opened_file_path" value="$PROJECT_DIR$/../bestycafe" />
     <property name="list.type.of.created.stylesheet" value="CSS" />
     <property name="nodejs_package_manager_path" value="npm" />
-    <property name="settings.editor.selected.configurable" value="reference.settings.ide.settings.web.browsers" />
+    <property name="settings.editor.selected.configurable" value="org.jetbrains.plugins.github.ui.GithubSettingsConfigurable" />
     <property name="vue.rearranger.settings.migration" value="true" />
   </component>
   <component name="RecentsManager">
@@ -119,7 +119,8 @@
       <workItem from="1632226055667" duration="19407000" />
       <workItem from="1632306415773" duration="16107000" />
       <workItem from="1632330901462" duration="9142000" />
-      <workItem from="1632391789873" duration="8525000" />
+      <workItem from="1632391789873" duration="27126000" />
+      <workItem from="1632486713989" duration="5959000" />
     </task>
     <task id="LOCAL-00001" summary="working on apis">
       <created>1632400790233</created>
@@ -142,7 +143,28 @@
       <option name="project" value="LOCAL" />
       <updated>1632401442493</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="working on apis">
+      <created>1632402158493</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1632402158494</updated>
+    </task>
+    <task id="LOCAL-00005" summary="working on apis">
+      <created>1632402281190</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1632402281190</updated>
+    </task>
+    <task id="LOCAL-00006" summary="working on apis">
+      <created>1632402392501</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1632402392501</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

@@ -78,4 +78,7 @@ Route::prefix('v1')->namespace('Api')->group(function () {
 
     //add new service
     Route::post('add-service', 'ApiController@addNewService');
+
+    //edit service
+    Route::post('edit-service', 'ApiController@editService');
 });

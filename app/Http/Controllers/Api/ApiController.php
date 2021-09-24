@@ -690,6 +690,7 @@ class ApiController extends Controller
                         $data = [];
                         $lang = $request['lang'];
                         $nameVar = "name_$lang";
+                        $descriptionVar = "description_$lang";
                         $valueVar = "value_$lang";
 
                         foreach ($services as $service) {
@@ -720,6 +721,9 @@ class ApiController extends Controller
                                 'user_id' => $service['user_id'],
                                 'category_id' => $service['category_id'],
                                 'sub_category_id' => $service['sub_category_id'],
+                                'name' => $service->$nameVar,
+                                'description' => $service->$descriptionVar,
+                                'as_offers' => $service->as_offers,
                                 'fields' => $fields_data,
                                 'images' => count($images) ? $images : null
                             ];
@@ -764,6 +768,7 @@ class ApiController extends Controller
                         $data = [];
                         $lang = $request['lang'];
                         $nameVar = "name_$lang";
+                        $descriptionVar = "description_$lang";
                         $valueVar = "value_$lang";
 
                         foreach ($services as $service) {
@@ -793,6 +798,9 @@ class ApiController extends Controller
                                 'id' => $service['id'],
                                 'category_id' => $service['category_id'],
                                 'sub_category_id' => $service['sub_category_id'],
+                                'name' => $service->$nameVar,
+                                'description' => $service->$descriptionVar,
+                                'as_offers' => $service->as_offers,
                                 'fields' => $fields_data,
                                 'images' => count($images) ? $images : null
                             ];
@@ -814,6 +822,103 @@ class ApiController extends Controller
 
     //add new service
     public function addNewService(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'route_token' => 'required',
+                'lang' => 'required',
+                'user_id' => 'required',
+                'category_id' => 'required',
+                'sub_category_id' => 'required',
+                'name' => 'required',
+                'description' => 'required',
+                'images' => 'required',
+                'as_offers' => 'required',
+                'fields' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return apiResponse('e400', false, $validator->errors()->first());
+            }
+
+            if ($request['route_token'] == $this->routeToken()) {
+                $lang = $request['lang'];
+
+                /*translate only name and description*/
+                if ($lang == 'ar') {
+                    $name_ar = $request['name'];
+                    $name_en = GoogleTranslate::trans($request['name'], 'en', 'ar');
+                    $description_ar = $request['description'];
+                    $description_en = GoogleTranslate::trans($request['description'], 'en', 'ar');
+                } else {
+                    $name_ar = GoogleTranslate::trans($request['name'], 'ar', 'en');
+                    $name_en = $request['name'];
+                    $description_ar = GoogleTranslate::trans($request['description'], 'ar', 'en');
+                    $description_en = $request['description'];
+                }
+
+                /* save service data */
+                $service = Service::create([
+                    'user_id' => $request['user_id'],
+                    'category_id' => $request['category_id'],
+                    'sub_category_id' => $request['sub_category_id'],
+                    'name_ar' => $name_ar,
+                    'name_en' => $name_en,
+                    'description_ar' => $description_ar,
+                    'description_en' => $description_en,
+                    'as_offers' => $request['as_offers'] == 1 ? 1 : 0,
+                ]);
+
+                /* save fields for service */
+                foreach ($request['fields'] as $item) {
+                    $field = Field::where('id', $item['id'])->first();
+
+                    /*translate only fields has type tex or varchar*/
+                    if ($field->type == 'varchar' || $field->type == 'text') {
+                        /*translate fields before save*/
+                        if ($lang == 'ar') {
+                            $value_ar = $item['value'];
+                            $value_en = GoogleTranslate::trans($item['value'], 'en', 'ar');
+                        } else {
+                            $value_ar = GoogleTranslate::trans($item['value'], 'ar', 'en');
+                            $value_en = $item['value'];
+                        }
+                    } else {
+                        $value_ar = $item['value'];
+                        $value_en = $item['value'];
+                    }
+
+                    FieldService::create([
+                        'field_id' => $item['id'],
+                        'service_id' => $service->id,
+                        'value_ar' => $value_ar,
+                        'value_en' => $value_en,
+                    ]);
+                }
+
+                /* هنا بقي بنتشيك الاول لو في صور مبعوته في الريكويست لانها اكتر من صوره والصور دي برضو تبع السيرفيس بس في جدول تاني معلش اصل السيرفيس عندنا متعبه شويه  */
+                if ($request->has('images')) {
+                    foreach ($request['images'] as $image) {
+                        $filePath = $this->uploadImage('services', $image);
+                        ServiceImage::create([
+                            'service_id' => $service->id,
+                            'image' => $filePath
+                        ]);
+                    }
+                }
+
+                return apiResponse('e200', true, 'تم حفظ البيانات بنجاح');
+            } else {
+                return apiResponse('e400', false, 'من فضلك ضع توكين صحيح');
+            }
+
+        } catch (\Exception $ex) {
+            return apiResponse('e500', false, $ex->getMessage());
+        }
+    }
+
+    //edit service
+    public function editService(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
